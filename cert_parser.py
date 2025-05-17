@@ -1,7 +1,6 @@
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 import hashlib
-import datetime
 
 def parse_certificate(filepath):
     with open(filepath, 'rb') as f:

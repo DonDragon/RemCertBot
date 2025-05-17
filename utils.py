@@ -1,4 +1,3 @@
-import os
 import zipfile
 
 def extract_zip(file_path, extract_to):

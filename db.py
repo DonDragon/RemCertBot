@@ -20,8 +20,10 @@ def init_db():
     )
     ''')
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS allowed_users (
-        telegram_id INTEGER PRIMARY KEY
+    CREATE TABLE IF NOT EXISTS shared_access (
+        owner_id INTEGER NOT NULL,
+        viewer_id INTEGER NOT NULL,
+        PRIMARY KEY (owner_id, viewer_id)
     )
     ''')
     conn.commit()
@@ -55,32 +57,34 @@ def insert_certificate(cert, telegram_id, filename):
     finally:
         conn.close()
 
-def is_user_allowed(telegram_id):
+def grant_access(owner_id, viewer_id):
     conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM allowed_users WHERE telegram_id = ?", (telegram_id,))
+    cursor.execute("INSERT OR IGNORE INTO shared_access (owner_id, viewer_id) VALUES (?, ?)", (owner_id, viewer_id))
+    conn.commit()
+    conn.close()
+
+def revoke_access(owner_id, viewer_id):
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM shared_access WHERE owner_id = ? AND viewer_id = ?", (owner_id, viewer_id))
+    conn.commit()
+    conn.close()
+
+def get_shared_with(owner_id):
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT viewer_id FROM shared_access WHERE owner_id = ?", (owner_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+def has_view_access(owner_id, viewer_id):
+    if owner_id == viewer_id:
+        return True
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM shared_access WHERE owner_id = ? AND viewer_id = ?", (owner_id, viewer_id))
     result = cursor.fetchone()
     conn.close()
     return result is not None
-
-def add_user(telegram_id):
-    conn = sqlite3.connect("certificates.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT OR IGNORE INTO allowed_users (telegram_id) VALUES (?)", (telegram_id,))
-    conn.commit()
-    conn.close()
-
-def remove_user(telegram_id):
-    conn = sqlite3.connect("certificates.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM allowed_users WHERE telegram_id = ?", (telegram_id,))
-    conn.commit()
-    conn.close()
-
-def list_users():
-    conn = sqlite3.connect("certificates.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT telegram_id FROM allowed_users")
-    users = cursor.fetchall()
-    conn.close()
-    return [u[0] for u in users]
