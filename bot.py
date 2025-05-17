@@ -6,7 +6,7 @@ from datetime import datetime
 from telegram import Update, Document
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
 from config import BOT_TOKEN
-from db import init_db, insert_certificate, parse_access_rights, grant_access, revoke_access, get_shared_with, has_view_access
+from db import init_db, insert_certificate, grant_access, revoke_access, get_shared_with, has_view_access
 from cert_parser import parse_certificate
 from utils import extract_zip, is_certificate_file
 from bot_buttons import main_menu_keyboard, access_menu_keyboard
