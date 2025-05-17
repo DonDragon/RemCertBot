@@ -92,8 +92,8 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("ℹ️ Сертификаты не найдены.")
         return
 
-    response = "📄 Сертификаты:
-"
+    response = "📄 Сертификаты:"
+
     for i, (org, director, valid_to) in enumerate(rows, 1):
         valid_dt = datetime.fromisoformat(valid_to).date()
         response += f"{i}. 🏢 {org} | 👤 {director}\n   ⏳ До: {valid_dt}\n"
@@ -180,8 +180,7 @@ async def shared_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not viewers:
         await update.message.reply_text("🔒 Вы ни с кем не делитесь своими сертификатами.")
     else:
-        await update.message.reply_text("📤 Ваши данные доступны:
-" + "\n".join(str(uid) for uid in viewers))
+        await update.message.reply_text("📤 Ваши данные доступны: " + "\n".join(str(uid) for uid in viewers))
 
 
 async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -207,7 +206,7 @@ def main():
     app.add_handler(CommandHandler("shared", shared_cmd))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_button))
-        app.add_handler(CallbackQueryHandler(handle_callback))
+    app.add_handler(CallbackQueryHandler(handle_callback))
     app.run_polling()
 
 if __name__ == "__main__":
