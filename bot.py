@@ -57,7 +57,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✅ Добавлено: {count_added}, Пропущено (дубликаты): {count_skipped}"
         )
 
-async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+""" async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     viewer_id = update.effective_user.id
     args = context.args or []
     owner_id = viewer_id
@@ -98,7 +98,7 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for i, (org, director, valid_to) in enumerate(rows, 1):
         valid_dt = datetime.fromisoformat(valid_to).date()
         response += f"{i}. 🏢 {org} | 👤 {director}\n   ⏳ До: {valid_dt}\n"
-    await update.message.reply_text(response)
+    await update.message.reply_text(response) """
 
 async def firm_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     viewer_id = update.effective_user.id
@@ -230,6 +230,31 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
     else:
         await query.edit_message_text("⚠️ Неизвестная команда.")
+
+async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from db import get_certificates_for_user, get_certificates_shared_with
+
+    user_id = update.effective_user.id
+    own = get_certificates_for_user(user_id)
+    shared = get_certificates_shared_with(user_id)
+
+    if not own and not shared:
+        await update.message.reply_text("📭 У вас нет доступных сертификатов.")
+        return
+
+    response = "📄 Ваши сертификаты:\n"
+
+    if own:
+        response += "\n🗂 Собственные:\n"
+        for cert in own:
+            response += f"🏢 {cert[0]}\n👤 {cert[1]}\n📆 До: {cert[2]}\n\n"
+
+    if shared:
+        response += "🔗 Доступные от других пользователей:\n"
+        for cert in shared:
+            response += f"🏢 {cert[0]}\n👤 {cert[1]}\n📆 До: {cert[2]}\n\n"
+
+    await update.message.reply_text(response)
 
 
 def main():

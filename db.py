@@ -88,3 +88,31 @@ def has_view_access(owner_id, viewer_id):
     result = cursor.fetchone()
     conn.close()
     return result is not None
+
+def get_certificates_for_user(user_id):
+    conn = sqlite3.connect("certs.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT company_name, director_name, valid_to FROM certificates WHERE owner_id = ?",
+        (user_id,)
+    )
+    results = cursor.fetchall()
+    conn.close()
+    return results
+
+def get_certificates_shared_with(user_id):
+    conn = sqlite3.connect("certs.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        '''
+        SELECT company_name, director_name, valid_to
+        FROM certificates
+        WHERE owner_id IN (
+            SELECT owner_id FROM shared_access WHERE shared_with_id = ?
+        )
+        ''',
+        (user_id,)
+    )
+    results = cursor.fetchall()
+    conn.close()
+    return results
