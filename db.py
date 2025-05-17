@@ -1,3 +1,4 @@
+
 import sqlite3
 from datetime import datetime
 
@@ -90,29 +91,26 @@ def has_view_access(owner_id, viewer_id):
     return result is not None
 
 def get_certificates_for_user(user_id):
-    conn = sqlite3.connect("certs.db")
+    conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT company_name, director_name, valid_to FROM certificates WHERE owner_id = ?",
+        "SELECT organization, director, valid_to FROM certificates WHERE telegram_id = ?",
         (user_id,)
     )
-    results = cursor.fetchall()
+    result = cursor.fetchall()
     conn.close()
-    return results
+    return result
 
 def get_certificates_shared_with(user_id):
-    conn = sqlite3.connect("certs.db")
+    conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
-    cursor.execute(
-        '''
-        SELECT company_name, director_name, valid_to
+    cursor.execute('''
+        SELECT organization, director, valid_to
         FROM certificates
-        WHERE owner_id IN (
-            SELECT owner_id FROM shared_access WHERE shared_with_id = ?
+        WHERE telegram_id IN (
+            SELECT owner_id FROM shared_access WHERE viewer_id = ?
         )
-        ''',
-        (user_id,)
-    )
-    results = cursor.fetchall()
+    ''', (user_id,))
+    result = cursor.fetchall()
     conn.close()
-    return results
+    return result
