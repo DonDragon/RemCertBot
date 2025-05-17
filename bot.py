@@ -195,6 +195,19 @@ async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif text == "👁 Доступы":
         await update.message.reply_text("🔐 Управление доступом:", reply_markup=access_menu_keyboard())
 
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "share":
+        await query.edit_message_text("✉️ Введите команду /share <user_id>, чтобы поделиться доступом.")
+    elif query.data == "unshare":
+        await query.edit_message_text("🧹 Введите команду /unshare <user_id>, чтобы отозвать доступ.")
+    elif query.data == "shared_list":
+        await shared_cmd(update, context)
+    else:
+        await query.edit_message_text("⚠️ Неизвестная команда.")
+
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -213,15 +226,3 @@ if __name__ == "__main__":
     main()
 
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
-    if query.data == "share":
-        await query.edit_message_text("✉️ Введите команду /share <user_id>, чтобы поделиться доступом.")
-    elif query.data == "unshare":
-        await query.edit_message_text("🧹 Введите команду /unshare <user_id>, чтобы отозвать доступ.")
-    elif query.data == "shared_list":
-        await shared_cmd(update, context)
-    else:
-        await query.edit_message_text("⚠️ Неизвестная команда.")
