@@ -117,6 +117,7 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("\n\n".join(lines), parse_mode="Markdown")
 
+
 async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "📥 Загрузить сертификат":

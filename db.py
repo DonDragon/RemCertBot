@@ -114,3 +114,21 @@ def get_certificates_shared_with(user_id):
     result = cursor.fetchall()
     conn.close()
     return result
+
+
+def get_user_language(user_id):
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT language FROM users WHERE telegram_id = ?", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] if result else "ua"
+
+def set_user_language(user_id, lang_code):
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (telegram_id, language) VALUES (?, ?) ON CONFLICT(telegram_id) DO UPDATE SET language = ?", (user_id, lang_code, lang_code))
+    conn.commit()
+    conn.close()
+
+
