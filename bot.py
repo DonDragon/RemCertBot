@@ -79,6 +79,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    from db import get_certificates_for_user, get_certificates_shared_with
+
     own = get_certificates_for_user(user_id)
     shared = get_certificates_shared_with(user_id)
 
@@ -86,18 +88,34 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("📭 У вас нет доступных сертификатов.")
         return
 
-    response = "📄 Ваши сертификаты:"
+    lines = ["📄 Ваши сертификаты:"]
+    idx = 1
+
     if own:
-        response += "🗂 Собственные:"
-        for cert in own:
-            response += f"🏢 {cert[0]} 👤 {cert[1]} 📆 До: {cert[2]} "
+        lines.append("\n🗂 *Собственные:*")
+        for org, director, valid_to in own:
+            try:
+                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+            except:
+                valid_date = valid_to
+            lines.append(
+                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+            )
+            idx += 1
 
     if shared:
-        response += "🔗 Доступные от других пользователей:"
-        for cert in shared:
-            response += f"🏢 {cert[0]} 👤 {cert[1]} 📆 До: {cert[2]} "
+        lines.append("\n🔗 *Доступные от других пользователей:*")
+        for org, director, valid_to in shared:
+            try:
+                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+            except:
+                valid_date = valid_to
+            lines.append(
+                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+            )
+            idx += 1
 
-    await update.message.reply_text(response)
+    await update.message.reply_text("\n\n".join(lines), parse_mode="Markdown")
 
 async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
