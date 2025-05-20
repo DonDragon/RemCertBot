@@ -289,7 +289,7 @@ async def main():
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
-    await app.updater.idle()
+    await app.wait_until_shutdown()
 
 if __name__ == "__main__":
     import asyncio
