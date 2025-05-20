@@ -1,6 +1,11 @@
 
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from i18n import translations
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
+from db import get_user_language, set_user_language
+from i18n import translations
+
 
 def _(key, lang="ua"):
     return translations.get(lang, translations["ua"]).get(key, key)
