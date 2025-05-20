@@ -25,14 +25,16 @@ from datetime import datetime
 
 init_db()
 
-def main_menu_keyboard():
+
+def main_menu_keyboard(lang):
     return ReplyKeyboardMarkup(
         keyboard=[
-            ["📥 Загрузить сертификат", "📄 Мои сертификаты"],
-            ["🔍 Поиск по фирме", "👁 Доступы"]
+            [_(key="menu_upload", lang=lang), _(key="menu_my", lang=lang)],
+            [_(key="menu_search", lang=lang), _(key="menu_access", lang=lang)]
         ],
         resize_keyboard=True
     )
+
 
 def access_menu_keyboard():
     return InlineKeyboardMarkup([
@@ -46,7 +48,8 @@ def access_menu_keyboard():
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Привет! Я RemCertBot. Выберите действие:", reply_markup=main_menu_keyboard())
+    lang = get_user_language(update.effective_user.id)
+    await update.message.reply_text(_(key="welcome", lang=lang), reply_markup=main_menu_keyboard(lang))
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_language(update.effective_user.id)
@@ -129,13 +132,13 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     lang = get_user_language(update.effective_user.id)
-    if text == "📥 Загрузить сертификат":
+    if text == _(key="menu_upload", lang=lang):
         await update.message.reply_text(_(key="upload_prompt", lang=lang))
-    elif text == "📄 Мои сертификаты":
+    elif text == _(key="menu_my", lang=lang):
         await certs_cmd(update, context)
-    elif text == "🔍 Поиск по фирме":
+    elif text == _(key="menu_search", lang=lang):
         await update.message.reply_text(_(key="send_firm", lang=lang))
-    elif text == "👁 Доступы":
+    elif text == _(key="menu_access", lang=lang):
         await update.message.reply_text(_(key="access_menu", lang=lang), reply_markup=access_menu_keyboard())
 
 async def share_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
