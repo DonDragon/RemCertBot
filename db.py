@@ -131,4 +131,12 @@ def set_user_language(user_id, lang_code):
     conn.commit()
     conn.close()
 
+def get_all_user_ids():
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT telegram_id FROM users")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
 

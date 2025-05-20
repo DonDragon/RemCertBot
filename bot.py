@@ -196,6 +196,31 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.edit_message_text("⚠️ Неизвестная команда.")
 
+ADMIN_IDS = [127588621]  # список разрешённых ID
+
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("⛔ У вас нет прав на эту команду.")
+        return
+
+    message = " ".join(context.args)
+    if not message:
+        await update.message.reply_text("❗ Используйте: /broadcast <текст>")
+        return
+
+    all_ids = get_all_user_ids()  # из базы
+    count = 0
+    for uid in all_ids:
+        try:
+            await context.bot.send_message(chat_id=uid, text=message)
+            count += 1
+        except Exception:
+            pass  # например, если пользователь заблокировал бота
+
+    await update.message.reply_text(f"✅ Сообщение отправлено {count} пользователям.")
+
+
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
