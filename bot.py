@@ -1,3 +1,4 @@
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
@@ -6,27 +7,29 @@ from telegram.ext import (
 from config import BOT_TOKEN
 from db import (
     init_db, insert_certificate, grant_access, revoke_access,
-    get_shared_with, has_view_access,
-    get_certificates_for_user, get_certificates_shared_with,
+    get_shared_with, has_view_access, get_certificates_for_user, get_certificates_shared_with,
     get_user_language, set_user_language
 )
+
 from cert_parser import parse_certificate
 from utils import extract_zip, is_certificate_file
 from i18n import translations
 import os
+
+def _(key, lang="ua"):
+    from i18n import translations
+    return translations.get(lang, translations["ua"]).get(key, key)
+
 import tempfile
 from datetime import datetime
 
 init_db()
 
-def _(key, lang="ua"):
-    return translations.get(lang, translations["ua"]).get(key, key)
-
-def build_main_menu(lang="ua"):
+def main_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [_(key="menu_upload", lang=lang), _(key="menu_my", lang=lang)],
-            [_(key="menu_search", lang=lang), _(key="menu_access", lang=lang)]
+            ["📥 Загрузить сертификат", "📄 Мои сертификаты"],
+            ["🔍 Поиск по фирме", "👁 Доступы"]
         ],
         resize_keyboard=True
     )
@@ -43,28 +46,11 @@ def access_menu_keyboard():
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    from db import get_user_language, set_user_language
-    from i18n import translations
-
-    def _(key, lang="ua"):
-        return translations.get(lang, translations["ua"]).get(key, key)
-
-    tg_lang = update.effective_user.language_code or "ua"
-    known_langs = ["ua", "ru", "en"]
-
-    # если пользователь не в базе или установлен дефолт — устанавливаем язык Telegram
-    if get_user_language(user_id) == "ua" and tg_lang in known_langs:
-        set_user_language(user_id, tg_lang)
-
-    lang = get_user_language(user_id)
-    from bot import build_main_menu
-    await update.message.reply_text(_(key="welcome", lang=lang), reply_markup=build_main_menu(lang))
-
+    await update.message.reply_text("👋 Привет! Я RemCertBot. Выберите действие:", reply_markup=main_menu_keyboard())
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = get_user_language(update.effective_user.id)
     user_id = update.effective_user.id
-    lang = get_user_language(user_id)
     document = update.message.document
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -82,7 +68,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif is_certificate_file(document.file_name):
             cert_paths.append(file_path)
         else:
-            await update.message.reply_text("❌ Unsupported file format.")
+            await update.message.reply_text("❌ Неподдерживаемый формат файла.")
             return
 
         added = 0
@@ -101,81 +87,122 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    lang = get_user_language(user_id)
+    from db import get_certificates_for_user, get_certificates_shared_with
+
     own = get_certificates_for_user(user_id)
     shared = get_certificates_shared_with(user_id)
 
     if not own and not shared:
-        await update.message.reply_text(_(key="no_certificates", lang=lang))
+        await update.message.reply_text("📭 У вас нет доступных сертификатов.")
         return
 
-    lines = [f"📄 {_(key='menu_my', lang=lang)}:"]
+    lines = ["📄 Ваши сертификаты:"]
     idx = 1
 
     if own:
-        lines.append(f" 🗂 *{_(key='own_certs', lang=lang)}*:")
+        lines.append("\n🗂 *Собственные:*")
         for org, director, valid_to in own:
-            valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
-            lines.append( f"{idx}. *{org}* 👤 {director} ⏳ До: {valid_date}")
+            try:
+                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+            except:
+                valid_date = valid_to
+            lines.append(
+                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+            )
             idx += 1
 
     if shared:
-        lines.append(f"🔗 *{_(key='shared_certs', lang=lang)}*:")
+        lines.append("\n🔗 *Доступные от других пользователей:*")
         for org, director, valid_to in shared:
-            valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
-            lines.append( f"{idx}. *{org}* 👤 {director} ⏳ До: {valid_date}")
+            try:
+                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+            except:
+                valid_date = valid_to
+            lines.append(
+                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+            )
             idx += 1
 
-    await update.message.reply_text("".join(lines), parse_mode="Markdown")
+    await update.message.reply_text("\n\n".join(lines), parse_mode="Markdown")
+
 
 async def handle_text_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    user_id = update.effective_user.id
-    lang = get_user_language(user_id)
-
-    if text == _(key="menu_upload", lang=lang):
-        await update.message.reply_text("📎 Просто отправьте файл сертификата или архив .zip.")
-    elif text == _(key="menu_my", lang=lang):
-        await certs_cmd(update, context)
-    elif text == _(key="menu_search", lang=lang):
-        await update.message.reply_text("🔎 Используйте команду: /firm <название>")
-    elif text == _(key="menu_access", lang=lang):
-        await update.message.reply_text("🔐 Управление доступом:", reply_markup=access_menu_keyboard())
-
-async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_language(update.effective_user.id)
-    buttons = [
-        [
-            InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_ua"),
-            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
-            InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
-        ]
-    ]
-    await update.message.reply_text(_(key="choose_lang", lang=lang), reply_markup=InlineKeyboardMarkup(buttons))
+    if text == "📥 Загрузить сертификат":
+        await update.message.reply_text(_(key="upload_prompt", lang=lang))
+    elif text == "📄 Мои сертификаты":
+        await certs_cmd(update, context)
+    elif text == "🔍 Поиск по фирме":
+        await update.message.reply_text(_(key="send_firm", lang=lang))
+    elif text == "👁 Доступы":
+        await update.message.reply_text(_(key="access_menu", lang=lang), reply_markup=access_menu_keyboard())
 
-async def handle_lang_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def share_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = get_user_language(update.effective_user.id)
+    owner_id = update.effective_user.id
+    if not context.args:
+        await update.message.reply_text("❗ Использование: /share <user_id>")
+        return
+    try:
+        viewer_id = int(context.args[0])
+        grant_access(owner_id, viewer_id)
+        await update.message.reply_text(f"{_(key='access_granted', lang=lang)} {viewer_id}.")
+    except:
+        await update.message.reply_text(_(key="invalid_id", lang=lang))
+
+async def unshare_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = get_user_language(update.effective_user.id)
+    owner_id = update.effective_user.id
+    if not context.args:
+        await update.message.reply_text("❗ Использование: /unshare <user_id>")
+        return
+    try:
+        viewer_id = int(context.args[0])
+        revoke_access(owner_id, viewer_id)
+        await update.message.reply_text(f"{_(key='access_revoked', lang=lang)} {viewer_id}.")
+    except:
+        await update.message.reply_text(_(key="invalid_id", lang=lang))
+
+async def shared_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    owner_id = update.effective_user.id
+    viewers = get_shared_with(owner_id)
+    if not viewers:
+        await update.message.reply_text("🔒 Вы ни с кем не делитесь своими сертификатами.")
+    else:
+        await update.message.reply_text("📤 Ваши данные доступны: " + "\n".join(str(u) for u in viewers))
+
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
 
-    if query.data.startswith("lang_"):
-        lang = query.data.split("_")[1]
-        set_user_language(user_id, lang)
-        msg = {
-            "ua": "✅ Мову змінено на українську 🇺🇦",
-            "ru": "✅ Язык успешно изменён на русский 🇷🇺",
-            "en": "✅ Language switched to English 🇬🇧"
-        }.get(lang, "✅ Language updated.")
-        await query.edit_message_text(msg)
+    if query.data == "share":
+        await query.edit_message_text("✉️ Введите команду /share <user_id>, чтобы поделиться доступом.")
+    elif query.data == "unshare":
+        await query.edit_message_text("🧹 Введите команду /unshare <user_id>, чтобы отозвать доступ.")
+    elif query.data == "shared_list":
+        shared_ids = get_shared_with(user_id)
+        if not shared_ids:
+            await query.edit_message_text("👤 У вас нет добавленных сертификатов или доступ не передавался.")
+        else:
+            lines = ["🔐 Доступ открыт для:"]
+            for uid in shared_ids:
+                lines.append(f"• ID: `{uid}`")
+            await query.edit_message_text("\n".join(lines), parse_mode="Markdown")
+    else:
+        await query.edit_message_text("⚠️ Неизвестная команда.")
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("certs", certs_cmd))
-    app.add_handler(CommandHandler("language", language_cmd))
+    app.add_handler(CommandHandler("share", share_cmd))
+    app.add_handler(CommandHandler("unshare", unshare_cmd))
+    app.add_handler(CommandHandler("shared", shared_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_button))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(CallbackQueryHandler(handle_lang_choice, pattern="^lang_"))
+    app.add_handler(CallbackQueryHandler(handle_callback))
     app.run_polling()
 
 if __name__ == "__main__":
