@@ -94,7 +94,7 @@ def get_certificates_for_user(user_id):
     conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT organization, director, valid_to FROM certificates WHERE telegram_id = ?",
+    "SELECT organization, director, valid_to FROM certificates WHERE telegram_id = ? ORDER BY valid_to ASC",
         (user_id,)
     )
     result = cursor.fetchall()
