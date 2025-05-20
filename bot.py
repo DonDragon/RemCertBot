@@ -268,11 +268,6 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def main():
-    
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(notify_users, 'cron', hour=10, minute=0)
-    scheduler.start()
-
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -284,10 +279,18 @@ async def main():
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(CommandHandler("language", language_cmd))
     app.add_handler(CallbackQueryHandler(handle_lang_choice, pattern="^lang_"))
+    app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(CommandHandler("broadcast", broadcast))
 
-    await app.run_polling()
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(notify_users, 'cron', hour=10, minute=0)
+    scheduler.start()
+
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    await app.updater.idle()
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())
-
