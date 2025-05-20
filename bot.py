@@ -48,8 +48,21 @@ def access_menu_keyboard():
     ])
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = get_user_language(update.effective_user.id)
-    await update.message.reply_text(_(key="welcome", lang=lang), reply_markup=main_menu_keyboard(lang))
+    user_id = update.effective_user.id
+    tg_lang = update.effective_user.language_code or "uk"
+    known_langs = ["uk", "ru", "en"]
+
+    # Всегда записываем пользователя в базу (INSERT OR IGNORE)
+    if tg_lang not in known_langs:
+        tg_lang = "uk"
+    set_user_language(user_id, tg_lang)
+
+    lang = get_user_language(user_id)
+    await update.message.reply_text(
+        _(key="welcome", lang=lang),
+        reply_markup=main_menu_keyboard(lang)
+    )
+
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_language(update.effective_user.id)
