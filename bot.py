@@ -25,6 +25,35 @@ from datetime import datetime
 
 init_db()
 
+async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = get_user_language(update.effective_user.id)
+    buttons = [
+        [
+            InlineKeyboardButton("🇺🇦 Українська", callback_data="lang_uk"),
+            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
+            InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
+        ]
+    ]
+    await update.message.reply_text(
+        _(key="choose_lang", lang=lang),
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+async def handle_lang_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+
+    if query.data.startswith("lang_"):
+        lang = query.data.split("_")[1]
+        set_user_language(user_id, lang)
+        msg = {
+            "ua": "✅ Мову змінено на українську 🇺🇦",
+            "ru": "✅ Язык успешно изменён на русский 🇷🇺",
+            "en": "✅ Language switched to English 🇬🇧"
+        }.get(lang, "✅ Language updated.")
+        await query.edit_message_text(msg)
+
 
 def main_menu_keyboard(lang):
     return ReplyKeyboardMarkup(
@@ -49,12 +78,12 @@ def access_menu_keyboard():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    tg_lang = update.effective_user.language_code or "uk"
-    known_langs = ["uk", "ru", "en"]
+    tg_lang = update.effective_user.language_code or "ua"
+    known_langs = ["ua", "ru", "en"]
 
     # Всегда записываем пользователя в базу (INSERT OR IGNORE)
     if tg_lang not in known_langs:
-        tg_lang = "uk"
+        tg_lang = "ua"
     set_user_language(user_id, tg_lang)
 
     lang = get_user_language(user_id)
@@ -243,7 +272,8 @@ def main():
     app.add_handler(CommandHandler("shared", shared_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_button))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(CallbackQueryHandler(handle_callback))
+    app.add_handler(CommandHandler("language", language_cmd))
+    app.add_handler(CallbackQueryHandler(handle_lang_choice, pattern="^lang_"))
     app.run_polling()
 
 if __name__ == "__main__":
