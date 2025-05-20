@@ -267,7 +267,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Сообщение отправлено {count} пользователям.")
 
 
-async def main():
+def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -282,14 +282,11 @@ async def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(CommandHandler("broadcast", broadcast))
 
-    # Планировщик
     scheduler = AsyncIOScheduler()
     scheduler.add_job(notify_users, 'cron', hour=10, minute=0)
     scheduler.start()
 
-    # Запуск бота (без конфликтов и без await app.updater.idle())
-    await app.run_polling()
+    app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
