@@ -1,3 +1,5 @@
+import asyncio
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from notify import notify_users
 
@@ -265,11 +267,13 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ Сообщение отправлено {count} пользователям.")
 
 
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+async def main():
+    
     scheduler = AsyncIOScheduler()
     scheduler.add_job(notify_users, 'cron', hour=10, minute=0)
     scheduler.start()
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("certs", certs_cmd))
@@ -281,7 +285,9 @@ def main():
     app.add_handler(CommandHandler("language", language_cmd))
     app.add_handler(CallbackQueryHandler(handle_lang_choice, pattern="^lang_"))
     app.add_handler(CommandHandler("broadcast", broadcast))
-    app.run_polling()
+
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
