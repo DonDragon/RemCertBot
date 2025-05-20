@@ -8,7 +8,7 @@ from config import BOT_TOKEN
 from db import (
     init_db, insert_certificate, grant_access, revoke_access,
     get_shared_with, has_view_access, get_certificates_for_user, get_certificates_shared_with,
-    get_user_language, set_user_language
+    get_user_language, set_user_language, get_all_user_ids
 )
 
 from cert_parser import parse_certificate
