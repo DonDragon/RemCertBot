@@ -27,14 +27,9 @@ async def notify_users():
         for telegram_id, org, director, valid_to in certs:
             valid_to = datetime.fromisoformat(valid_to).date()
             if days == 0:
-                msg = f"⚠️ Сегодня истекает срок действия сертификата:
-🏢 {org}
-👤 {director}"
+                msg = f"⚠️ Сегодня истекает срок действия сертификата: 🏢 {org} 👤 {director}"
             else:
-                msg = f"🔔 Через {days} дней истекает сертификат:
-🏢 {org}
-👤 {director}
-⏳ До: {valid_to}"
+                msg = f"🔔 Через {days} дней истекает сертификат:🏢 {org} 👤 {director} ⏳ До: {valid_to}"
 
             try:
                 await bot.send_message(chat_id=telegram_id, text=msg)
