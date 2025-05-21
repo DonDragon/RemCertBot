@@ -34,6 +34,12 @@ def insert_certificate(cert, telegram_id, filename):
     conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
     try:
+        # Сначала удаляем все старые сертификаты этой организации от этого пользователя
+        cursor.execute(
+            "DELETE FROM certificates WHERE telegram_id = ? AND organization = ?",
+            (telegram_id, cert["organization"])
+        )
+        # Теперь вставляем новый сертификат
         cursor.execute('''
         INSERT INTO certificates (
             telegram_id, organization, director, inn, edrpou, valid_from, valid_to,
