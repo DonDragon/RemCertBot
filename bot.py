@@ -152,11 +152,24 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("\n🗂 *Собственные:*")
         for org, director, valid_to in own:
             try:
-                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+                dt = datetime.fromisoformat(valid_to)
+                valid_date = dt.strftime("%d.%m.%Y")
             except:
                 valid_date = valid_to
-                expired = valid_date < datetime.today().date()
-                status = "🟥" if expired else "✅"
+                dt = None
+
+            if dt:
+                today = datetime.today()
+                days_left = (dt.date() - today.date()).days
+                if days_left < 0:
+                    status = "🟥"
+                elif days_left < 7:
+                    status = "⚠️"
+                else:
+                    status = "✅"
+            else:
+                status = "❔"
+
             lines.append(
                 f"{idx}.{status} *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
             )
@@ -166,11 +179,24 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("\n🔗 *Доступные от других пользователей:*")
         for org, director, valid_to in shared:
             try:
-                valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
+                dt = datetime.fromisoformat(valid_to)
+                valid_date = dt.strftime("%d.%m.%Y")
             except:
                 valid_date = valid_to
-                expired = valid_date < datetime.today().date()
-                status = "🟥" if expired else "✅"
+                dt = None
+
+            if dt:
+                today = datetime.today()
+                days_left = (dt.date() - today.date()).days
+                if days_left < 0:
+                    status = "🟥"
+                elif days_left < 7:
+                    status = "⚠️"
+                else:
+                    status = "✅"
+            else:
+                status = "❔"
+
             lines.append(
                 f"{status}{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
             )
