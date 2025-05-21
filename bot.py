@@ -155,8 +155,10 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
             except:
                 valid_date = valid_to
+                expired = valid_to < datetime.today().date()
+                status = "🟥 [ПРОСРОЧЕН]" if expired else "✅"
             lines.append(
-                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+                f"{status}{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
             )
             idx += 1
 
@@ -167,8 +169,10 @@ async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 valid_date = datetime.fromisoformat(valid_to).strftime("%d.%m.%Y")
             except:
                 valid_date = valid_to
+                expired = valid_to < datetime.today().date()
+                status = "🟥 [ПРОСРОЧЕН]" if expired else "✅"
             lines.append(
-                f"{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
+                f"{status}{idx}. *{org}*\n   👤 {director}\n   ⏳ До: {valid_date}"
             )
             idx += 1
 
