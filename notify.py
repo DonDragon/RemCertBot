@@ -12,11 +12,12 @@ def get_users_with_cert_expiring(days_ahead: int):
     cursor = conn.cursor()
 
     target_date = (datetime.utcnow() + timedelta(days=days_ahead)).date()
+    like_prefix = f"{target_date.isoformat()}%"
     cursor.execute('''
         SELECT telegram_id, organization, director, valid_to
         FROM certificates
-        WHERE DATE(valid_to) = ?
-    ''', (target_date.isoformat(),))
+        WHERE valid_to LIKE ?
+    ''', (like_prefix,))
     results = cursor.fetchall()
     conn.close()
     return results

@@ -1,6 +1,4 @@
 import asyncio
-
-from apscheduler.schedulers.background import BackgroundScheduler
 from notify import notify_users
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
@@ -8,7 +6,7 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     CallbackQueryHandler, ContextTypes, filters
 )
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMINS as ADMIN_IDS
 from db import (
     init_db, insert_certificate, grant_access, revoke_access,
     get_shared_with, has_view_access, get_certificates_for_user, get_certificates_shared_with,
@@ -25,7 +23,7 @@ def _(key, lang="ua"):
     return translations.get(lang, translations["ua"]).get(key, key)
 
 import tempfile
-from datetime import datetime
+from datetime import datetime, time as dtime
 
 init_db()
 
@@ -272,7 +270,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await query.edit_message_text("⚠️ Неизвестная команда.")
 
-ADMIN_IDS = [127588621]  # список разрешённых ID
+# ADMIN_IDS теперь импортируется из config.py (.env)
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -312,9 +310,15 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(CommandHandler("broadcast", broadcast))
 
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(notify_users, 'cron', hour=10, minute=0)
-    scheduler.start()
+    async def daily_notify_job(context: ContextTypes.DEFAULT_TYPE):
+        await notify_users()
+
+    local_tz = datetime.now().astimezone().tzinfo
+    app.job_queue.run_daily(
+        daily_notify_job,
+        time=dtime(hour=10, minute=0, tzinfo=local_tz),
+        name="daily_notify_job"
+    )
 
     app.run_polling()
 
