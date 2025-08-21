@@ -146,3 +146,18 @@ def get_all_user_ids():
     return [row[0] for row in rows]
 
 
+
+def delete_expired_certificates():
+    conn = sqlite3.connect("certificates.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        DELETE FROM certificates
+        WHERE DATE(REPLACE(valid_to, 'T', ' ')) < DATE('now','localtime')
+        """
+    )
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return deleted
+

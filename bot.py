@@ -10,7 +10,7 @@ from config import BOT_TOKEN, ADMINS as ADMIN_IDS
 from db import (
     init_db, insert_certificate, grant_access, revoke_access,
     get_shared_with, has_view_access, get_certificates_for_user, get_certificates_shared_with,
-    get_user_language, set_user_language, get_all_user_ids
+    get_user_language, set_user_language, get_all_user_ids, delete_expired_certificates
 )
 
 from cert_parser import parse_certificate
@@ -310,6 +310,16 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(CommandHandler("broadcast", broadcast))
     
+    async def cleanup_expired(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("⛔ У вас нет прав на эту команду.")
+            return
+        deleted = delete_expired_certificates()
+        await update.message.reply_text(f"🧹 Удалено просроченных сертификатов: {deleted}")
+
+    app.add_handler(CommandHandler("cleanup_expired", cleanup_expired))
+    
     async def notify_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id not in ADMIN_IDS:
@@ -327,7 +337,7 @@ def main():
     local_tz = datetime.now().astimezone().tzinfo
     app.job_queue.run_daily(
         daily_notify_job,
-        time=dtime(hour=12, minute=37, tzinfo=local_tz),
+        time=dtime(hour=7, minute=7, tzinfo=local_tz),
         name="daily_notify_job"
     )
 
