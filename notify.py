@@ -11,7 +11,8 @@ def get_users_with_cert_expiring(days_ahead: int):
     conn = sqlite3.connect("certificates.db")
     cursor = conn.cursor()
 
-    target_date = (datetime.utcnow() + timedelta(days=days_ahead)).date()
+    # Используем локальную дату, чтобы совпадать с локальным планировщиком
+    target_date = (datetime.now() + timedelta(days=days_ahead)).date()
     like_prefix = f"{target_date.isoformat()}%"
     cursor.execute('''
         SELECT telegram_id, organization, director, valid_to

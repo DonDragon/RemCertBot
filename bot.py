@@ -309,6 +309,17 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_lang_choice, pattern="^lang_"))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(CommandHandler("broadcast", broadcast))
+    
+    async def notify_now(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("⛔ У вас нет прав на эту команду.")
+            return
+        await update.message.reply_text("⏳ Запускаю проверку и рассылку уведомлений...")
+        await notify_users()
+        await update.message.reply_text("✅ Готово.")
+
+    app.add_handler(CommandHandler("notify_now", notify_now))
 
     async def daily_notify_job(context: ContextTypes.DEFAULT_TYPE):
         await notify_users()
