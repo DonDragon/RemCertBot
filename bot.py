@@ -316,7 +316,7 @@ def main():
     local_tz = datetime.now().astimezone().tzinfo
     app.job_queue.run_daily(
         daily_notify_job,
-        time=dtime(hour=10, minute=0, tzinfo=local_tz),
+        time=dtime(hour=0, minute=10, tzinfo=local_tz),
         name="daily_notify_job"
     )
 
