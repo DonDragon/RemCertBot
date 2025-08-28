@@ -26,7 +26,13 @@ def init_db():
         viewer_id INTEGER NOT NULL,
         PRIMARY KEY (owner_id, viewer_id)
     )
-    ''')
+''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        telegram_id INTEGER PRIMARY KEY,
+        language TEXT DEFAULT 'ua'
+    )
+''')
     conn.commit()
     conn.close()
 
@@ -59,7 +65,13 @@ def insert_certificate(cert, telegram_id, filename):
         ))
         conn.commit()
         return True
-    except sqlite3.IntegrityError:
+    except sqlite3.IntegrityError as e:
+        # Логируем детали ошибки для диагностики
+        print(f"IntegrityError при добавлении сертификата {filename}: {e}")
+        return False
+    except Exception as e:
+        # Логируем другие ошибки
+        print(f"Ошибка при добавлении сертификата {filename}: {e}")
         return False
     finally:
         conn.close()
