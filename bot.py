@@ -92,73 +92,118 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = get_user_language(update.effective_user.id)
-    user_id = update.effective_user.id
-    document = update.message.document
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        file_path = os.path.join(tmpdir, document.file_name)
-        tg_file = await document.get_file()
-        await tg_file.download_to_drive(file_path)
-
-        cert_paths = []
-        if document.file_name.lower().endswith(".zip"):
-            try:
-                extract_zip(file_path, tmpdir)
-                for root, _, files in os.walk(tmpdir):
-                    for name in files:
-                        if is_certificate_file(name):
-                            cert_paths.append(os.path.join(root, name))
-                if not cert_paths:
-                    await update.message.reply_text(_(key="no_certs_in_archive", lang=lang))
-                    return
-            except Exception as e:
-                await update.message.reply_text(_(key="archive_error", lang=lang).format(error=e))
-                return
-        elif is_certificate_file(document.file_name):
-            cert_paths.append(file_path)
-        else:
-            await update.message.reply_text(_(key="unsupported_format", lang=lang))
-            return
-
-        added = 0
-        skipped = 0
-        errors = 0
-        error_messages = []
+    try:
+        user_id = update.effective_user.id
+        document = update.message.document
         
-        for cert_path in cert_paths:
-            try:
-                cert = parse_certificate(cert_path)
-                filename = os.path.basename(cert_path)
-                
-                # Проверяем, что сертификат содержит необходимые данные
-                if not cert.get("organization") or not cert.get("sha1"):
-                    error_messages.append(_(key="incomplete_cert_data", lang=lang).format(filename=filename))
-                    errors += 1
-                    continue
+        print(f"DEBUG: Начинаем обработку документа {document.file_name} от пользователя {user_id}")
+        
+        try:
+            lang = get_user_language(user_id)
+            print(f"DEBUG: Язык пользователя: {lang}")
+        except Exception as e:
+            print(f"DEBUG: Ошибка получения языка пользователя: {e}")
+            lang = "ua"  # Язык по умолчанию
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = os.path.join(tmpdir, document.file_name)
+            tg_file = await document.get_file()
+            await tg_file.download_to_drive(file_path)
+
+            cert_paths = []
+            if document.file_name.lower().endswith(".zip"):
+                print(f"DEBUG: Обрабатываем ZIP архив: {document.file_name}")
+                try:
+                    extract_zip(file_path, tmpdir)
+                    print(f"DEBUG: ZIP архив распакован успешно")
                     
-                if insert_certificate(cert, user_id, filename):
-                    added += 1
-                else:
-                    skipped += 1
-            except Exception as e:
+                    for root, _, files in os.walk(tmpdir):
+                        print(f"DEBUG: Проверяем директорию {root}, найдено файлов: {len(files)}")
+                        for name in files:
+                            print(f"DEBUG: Проверяем файл {name}")
+                            if is_certificate_file(name):
+                                cert_paths.append(os.path.join(root, name))
+                                print(f"DEBUG: Найден сертификат: {name}")
+                    
+                    print(f"DEBUG: Всего найдено сертификатов: {len(cert_paths)}")
+                    if not cert_paths:
+                        print(f"DEBUG: Сертификаты не найдены, отправляем сообщение")
+                        await update.message.reply_text(_(key="no_certs_in_archive", lang=lang))
+                        return
+                except Exception as e:
+                    print(f"DEBUG: Ошибка при обработке ZIP: {e}")
+                    await update.message.reply_text(_(key="archive_error", lang=lang).format(error=e))
+                    return
+            elif is_certificate_file(document.file_name):
+                cert_paths.append(file_path)
+            else:
+                await update.message.reply_text(_(key="unsupported_format", lang=lang))
+                return
+
+            added = 0
+            skipped = 0
+            errors = 0
+            error_messages = []
+            
+            print(f"DEBUG: Начинаем обработку {len(cert_paths)} сертификатов")
+            
+            for cert_path in cert_paths:
                 filename = os.path.basename(cert_path)
-                error_messages.append(f"⚠️ {filename}: {e}")
-                errors += 1
+                print(f"DEBUG: Обрабатываем сертификат: {filename}")
+                try:
+                    cert = parse_certificate(cert_path)
+                    print(f"DEBUG: Сертификат {filename} парсится успешно")
+                    print(f"DEBUG: Организация: {cert.get('organization', 'НЕТ')}")
+                    print(f"DEBUG: SHA1: {cert.get('sha1', 'НЕТ')}")
+                    
+                    # Проверяем, что сертификат содержит необходимые данные
+                    if not cert.get("organization") or not cert.get("sha1"):
+                        print(f"DEBUG: {filename} содержит неполные данные")
+                        error_messages.append(_(key="incomplete_cert_data", lang=lang).format(filename=filename))
+                        errors += 1
+                        continue
+                        
+                    print(f"DEBUG: Пытаемся вставить сертификат {filename} в БД")
+                    if insert_certificate(cert, user_id, filename):
+                        print(f"DEBUG: Сертификат {filename} добавлен успешно")
+                        added += 1
+                    else:
+                        print(f"DEBUG: Сертификат {filename} пропущен (дубликат)")
+                        skipped += 1
+                except Exception as e:
+                    print(f"DEBUG: Ошибка при обработке {filename}: {e}")
+                    error_messages.append(f"⚠️ {filename}: {e}")
+                    errors += 1
+            
+            # Отправляем результат
+            print(f"DEBUG: Итого - добавлено: {added}, пропущено: {skipped}, ошибок: {errors}")
+            
+            if errors > 0:
+                result_message = _(key="upload_result_with_errors", lang=lang).format(added=added, skipped=skipped, errors=errors)
+            else:
+                result_message = _(key="upload_result", lang=lang).format(added=added, skipped=skipped)
+            
+            print(f"DEBUG: Отправляем результат: {result_message}")
+            await update.message.reply_text(result_message)
+            
+            # Отправляем детали ошибок, если есть
+            if error_messages:
+                error_text = "\n".join(error_messages[:5])  # Показываем максимум 5 ошибок
+                if len(error_messages) > 5:
+                    error_text += "\n" + _(key="more_errors", lang=lang).format(count=len(error_messages) - 5)
+                print(f"DEBUG: Отправляем детали ошибок: {error_text}")
+                await update.message.reply_text(error_text)
+            
+            print(f"DEBUG: Обработка документа завершена")
         
-        # Отправляем результат
-        if errors > 0:
-            result_message = _(key="upload_result_with_errors", lang=lang).format(added=added, skipped=skipped, errors=errors)
-        else:
-            result_message = _(key="upload_result", lang=lang).format(added=added, skipped=skipped)
-        await update.message.reply_text(result_message)
-        
-        # Отправляем детали ошибок, если есть
-        if error_messages:
-            error_text = "\n".join(error_messages[:5])  # Показываем максимум 5 ошибок
-            if len(error_messages) > 5:
-                error_text += "\n" + _(key="more_errors", lang=lang).format(count=len(error_messages) - 5)
-            await update.message.reply_text(error_text)
+    except Exception as e:
+        print(f"DEBUG: КРИТИЧЕСКАЯ ОШИБКА в handle_document: {e}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
+        try:
+            await update.message.reply_text(f"❌ Произошла ошибка при обработке файла: {e}")
+        except:
+            print("DEBUG: Не удалось отправить сообщение об ошибке пользователю")
 
 async def certs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
