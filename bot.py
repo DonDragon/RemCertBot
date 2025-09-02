@@ -23,7 +23,7 @@ def _(key, lang="ua"):
     return translations.get(lang, translations["ua"]).get(key, key)
 
 import tempfile
-from datetime import datetime, time as dtime
+from datetime import datetime, time
 
 init_db()
 
@@ -416,7 +416,7 @@ def main():
     local_tz = datetime.now().astimezone().tzinfo
     app.job_queue.run_daily(
         daily_notify_job,
-        time=dtime(hour=7, minute=7, tzinfo=local_tz),
+        time=time(hour=7, minute=7, tzinfo=local_tz),
         name="daily_notify_job"
     )
 
